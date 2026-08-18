@@ -2,7 +2,7 @@
 
 一个用于学习 TrueType 字体文件结构和字形渲染过程的 Java 示例工程。
 
-工程不依赖第三方字体解析库，直接使用 `RandomAccessFile` 读取字体文件中的 sfnt table，并从 `cmap`、`loca`、`glyf` 等表中查找和解析字形轮廓。项目同时提供 Java2D 对照示例，以及一个不使用 `java.awt.Font` 字形 API 的手工渲染示例。
+工程不依赖第三方字体解析库，直接使用 `RandomAccessFile` 读取字体文件中的 sfnt table，并从 `cmap`、`loca`、`glyf` 等表中查找和解析字形轮廓。
 
 ## 功能概览
 
@@ -12,7 +12,6 @@
 - 读取简单字形的轮廓点和 contour。
 - 将二次贝塞尔曲线离散化为线段并绘制字形轮廓。
 - 使用 Swing 显示解析后的字形轮廓。
-- 对比 Java2D 标准字体渲染、轮廓渲染和手工光栅化结果。
 
 ## 环境要求
 
@@ -31,7 +30,7 @@
 
 ### 运行基础解析示例
 
-`Demo01` 默认从项目根目录读取 `test.ttf`，解析汉字“赵”的 glyph，并在控制台输出字体表、字形信息和轮廓点信息：
+`Demo01` 默认从项目根目录读取 `test.ttf`，解析大写字母 `A` 的 glyph，并在控制台输出字体表、字形信息和轮廓点信息：
 
 ```bash
 ./gradlew classes
@@ -40,55 +39,24 @@ java -cp build/classes/java/main:build/resources/main com.cell.demo.fonts.Demo01
 
 该示例会打开 Swing 窗口，因此需要在支持图形界面的环境中运行。
 
-### 运行 Java2D 对照示例
+## 轮廓渲染流程
 
-`RenderLetterA` 使用 Java2D 生成三栏对照图，默认绘制字母 `A` 并输出 `letter-a.png`：
+`Demo01` 通过以下步骤把字体文件中的字形转换为 Swing 轮廓：
 
-```bash
-java -cp build/classes/java/main:build/resources/main \
-  com.cell.demo.fonts.RenderLetterA test.ttf letter-a.png
-```
+1. 从 `cmap` 将 Unicode code point 映射为 glyph ID。
+2. 根据 `head.indexToLocFormat` 从 `loca` 表读取 glyph 在 `glyf` 表中的偏移。
+3. 读取 contour 的端点、flags 和坐标增量，并还原为绝对坐标。
+4. 根据 on-curve/off-curve 标记识别直线和二次贝塞尔曲线。
+5. 连续的 off-curve 点之间插入隐含的 on-curve 中点。
+6. 将二次贝塞尔曲线细分为线段，并翻转 Y 轴后绘制到 Swing 画布。
 
-如果不传字体文件，则使用 Java 的逻辑字体：
-
-```bash
-java -cp build/classes/java/main:build/resources/main \
-  com.cell.demo.fonts.RenderLetterA
-```
-
-### 运行手工 TTF 渲染示例
-
-`ManualTtfLetterA` 不使用 `java.awt.Font`、`GlyphVector`、`Shape`、`Path2D` 或 `drawString`，而是手工完成以下流程：
-
-```text
-sfnt -> cmap -> glyph ID -> loca -> glyf -> contours
-     -> quadratic Bézier flattening -> winding fill -> supersampling -> PNG
-```
-
-编译并运行：
-
-```bash
-javac -d build/manual \
-  src/main/java/com/cell/demo/fonts/ManualTtfLetterA.java
-
-java -Djava.awt.headless=true \
-  -cp build/manual \
-  com.cell.demo.fonts.ManualTtfLetterA \
-  test.ttf manual-a.png 0041
-```
-
-第三个参数是十六进制 Unicode code point，也可以写成 `U+0041`。运行后会生成：
-
-- `manual-a.png`：手工光栅化结果。
-- `manual-a-debug.png`：带轮廓、控制点和包围盒的调试图。
+TrueType 的 contour 是闭合环，首尾点也需要按相邻点处理。当前实现主要用于学习和验证 `test.ttf` 中的简单字形，尚未抽象为覆盖所有 contour 起点和任意连续 off-curve 点组合的通用路径构建器。
 
 ## 项目结构
 
 ```text
 src/main/java/com/cell/demo/fonts/
 ├── Demo01.java                 # 分阶段解析 test.ttf，并显示字形轮廓
-├── ManualTtfLetterA.java       # 不使用 Java2D 字形 API 的手工 TTF 渲染器
-├── RenderLetterA.java           # Java2D、轮廓和 Path2D 渲染对照示例
 ├── helper/
 │   ├── BigUnsignedHelper.java   # 无符号整数读取
 │   ├── ByteHelper.java          # 字节输出辅助
@@ -107,15 +75,13 @@ src/main/java/com/cell/demo/fonts/
 项目根目录中的字体和图片用于示例或调试：
 
 - `test.ttf`：基础 TTF 解析和渲染示例使用的字体。
-- `letter-a.png`、`output.png`、`output-debug.png`：示例输出图片。
-- `letter-a.png` 等输出文件可以重新生成，不属于源码的一部分。
 
 ## 当前限制
 
 - 目前重点支持单文件 TTF，以及 `glyf` 表中的简单字形。
 - 复合字形（`numberOfContours < 0`）暂未实现，涉及组件递归和变换矩阵。
-- `ManualTtfLetterA` 支持 `cmap` format 4 和 format 12，但不是完整的 OpenType/TrueType 解析器。
 - `Demo01` 的输入文件路径当前写死为项目根目录下的 `test.ttf`。
+- 当前示例默认绘制 `A`，修改 `Demo01` 中的字符即可尝试其他 glyph。
 - CFF/OpenType `CFF` 字体、字体 hinting、完整 kerning 和 TTC collection 尚未覆盖。
 
 ## 参考的 TrueType 解析路径

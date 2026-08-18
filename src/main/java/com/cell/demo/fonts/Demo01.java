@@ -1,7 +1,5 @@
 package com.cell.demo.fonts;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONWriter;
 import com.cell.demo.fonts.helper.BigUnsignedHelper;
 import com.cell.demo.fonts.helper.ByteHelper;
 import com.cell.demo.fonts.model.CmapSubTable;
@@ -33,7 +31,7 @@ public class Demo01 {
         RandomAccessFile randomAccessFile = new RandomAccessFile(projectHome.resolve("test.ttf").toFile(), "r");
         Map<String, TableRecord> tableRecordMap = readTableDirectory(randomAccessFile);
 
-        char c = '赵';
+        char c = 'A';
 
         day02(randomAccessFile, tableRecordMap);
 
@@ -233,24 +231,23 @@ public class Demo01 {
             firstPoint = lastPoint + 1;
         }
 
-        System.out.println("contours = " + JSON.toJSONString(contours, JSONWriter.Feature.PrettyFormatWith4Space));
-
         day06(contours, tableRecordMap.get("head").unitsPerEm);
     }
 
     // 尝试绘制字形
     private static void day06(List<List<GlyphPoint>> contours, int unitsPerEm) {
-        System.out.println("contours.get(0).get(0) = " + contours.get(0).get(0));
-        JFrame frame = new JFrame("字体绘画");
-        frame.setSize(new Dimension(800, 600));
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("字体绘画");
+            frame.setSize(new Dimension(800, 600));
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        frame.setLayout(new BorderLayout());
+            frame.setLayout(new BorderLayout());
 
-        JPanel panel = new FontPanel(contours, 500f / unitsPerEm);
-        frame.add(panel);
+            JPanel panel = new FontPanel(contours, 500f / unitsPerEm);
+            frame.add(panel);
 
-        frame.setVisible(true);
+            frame.setVisible(true);
+        });
     }
 
     private static void day04(RandomAccessFile randomAccessFile, Map<String, TableRecord> tableRecordMap, int codePoint) throws IOException {

@@ -67,7 +67,9 @@ public class GlyphPointHelper {
     }
 
     public static GlyphPoint getMiddlePoint(GlyphPoint point1, GlyphPoint point2) {
-        return getControlPoint(point1, point2);
+        GlyphPoint controlPoint = getControlPoint(point1, point2);
+        controlPoint.onCurve = true;
+        return controlPoint;
     }
 
     private static GlyphPoint bezierMiddlePoint(GlyphPoint point1, GlyphPoint point2, GlyphPoint controlPoint) {
