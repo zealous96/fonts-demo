@@ -12,6 +12,12 @@ plugins {
 group = "com.cell.demos"
 version = "1.0"
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
 repositories {
     maven("https://maven.aliyun.com/repository/public/")
     mavenCentral()
